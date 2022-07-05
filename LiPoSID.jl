@@ -93,7 +93,7 @@ function lindblad_rhs(ρ, H, J)
     """
     Right hand side of the Lindblad master equation
     """
-    return -1im * (H * ρ - ρ * H) + J * ρ * J' - (J' * J  * ρ + ρ * J' * J) / 2
+    return -im * (H * ρ - ρ * H) + J * ρ * J' - (J' * J  * ρ + ρ * J' * J) / 2
     
 end
 
@@ -122,7 +122,29 @@ function pade_obj(ρ::Vector{Matrix{ComplexF64}}, t, H, J)
     return obj
 end
 
-function kraus_obj(ρ, K1, K2) 
+function simpson_obj(ρ::Vector{Matrix{ComplexF64}}, t, H, A)  
+    obj = 0
+    for i in 3:length(ρ)
+        obj += frobenius_norm2(
+            ρ[i] - ρ[i-2] - (t[i]-t[i-1])lindblad_rhs((ρ[i-2] + 4ρ[i-1] + ρ[i])/3, H, A)
+        )
+    end
+    obj = sum(real(coef) * mon for (coef, mon) in zip(coefficients(obj), monomials(obj)))
+    return obj
+end
+
+function simpson_obj(ρ::Array{ComplexF64,3}, t, H, A)  
+    obj = 0
+    for i in 3:length(ρ)
+        obj += frobenius_norm2(
+            ρ[:, :, i] - ρ[:, :, i-2] - (t[i]-t[i-1])lindblad_rhs((ρ[:, :, i-2] + 4ρ[:, :, i-1] + ρ[:, :, i])/3, H, A)
+        )
+    end
+    obj = sum(real(coef) * mon for (coef, mon) in zip(coefficients(obj), monomials(obj)))
+    return obj
+end
+
+function kraus_obj(ρ::Vector{Matrix{ComplexF64}}, K1, K2) 
     obj = 0
     for i in 1:length(ρ)-1
         obj += frobenius_norm2(K1 * ρ[i] * K1' - ρ[i+1]) + frobenius_norm2(K2 * ρ[i] * K2' - ρ[i+1])
