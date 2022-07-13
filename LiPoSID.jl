@@ -7,6 +7,7 @@ using MosekTools
 using Random
 using JuMP
 using NLopt
+using TSSOS
 
 function hankel(y::AbstractArray)
     m, time_duration = size(y) # m - dimention of output vector y, time_duration - length of timeseries (number of time steps)
@@ -173,7 +174,7 @@ function rand_Linblad_w_noise(basis, seed, w, t_list)
     
     time, ρ_exact = timeevolution.master(t_list, ρ₀, H, [J])
 
-    ρ = [ (1 - w) * ρₜ.data + w * rand_dm(2) for ρₜ in ρ_exact ]
+    ρ = [ (1 - w) * ρₜ.data + w * rand_dm(2) for ρₜ in ρ_exact ], H.data, J.data
        
 end
 
@@ -265,7 +266,9 @@ end
 function timeevolution_kraus(t_steps, ρ₀, K)
     ρ = [ρ₀]
     for t = 2:t_steps
-        push!(ρ, Hermitian(sum([K[i]* ρ[end] * K[i]' for i = 1:length(K)])))
+        #push!(ρ, Hermitian(sum([K[i]* ρ[end] * K[i]' for i = 1:length(K)])))
+        push!(ρ, sum([K[i]* ρ[end] * K[i]' for i = 1:length(K)]))
+
     end
     return ρ
 end  
@@ -428,5 +431,152 @@ function min_fidelity_between_series(basis, ρ1, ρ2)
     minimum([abs(fidelity(ρ1q[i], ρ2q[i])) for i in 1:len_of_series])
 
 end
+
+#using TSSOS
+
+function min2step(obj, constr)
+    # obj - is objective function
+    # constr - one constraint in the form of equation
+    
+    # extract valiables from the objective
+    vars = variables(obj)
+
+    iter = 0
+    best_sol = ones(length(vars))
+    
+    # Perform global minimization with TSSOS package
+    try
+        opt,sol,data = tssos_first([obj, constr], variables(obj), 2, numeq=1, solution=true, QUIET = true); 
+    
+        # execute higher levels of the TSSOS hierarchy
+        iter = 1
+        best_sol = sol
+
+        while ~isnothing(opt)
+            iter += 1
+            best_sol = sol
+            try
+                opt,sol,data = tssos_higher!(data, solution=true, QUIET = true);
+            catch
+                break
+            end
+            
+            if iter > 5
+                best_sol = ones(length(vars))
+                break
+            end
+        end
+    catch
+        best_sol = ones(length(vars))
+    end  
+   
+    function g(a...)
+        # Converting polynomial expression of objective to function to be minimized
+        obj(vars => a)
+    end
+    
+    function e(a...)
+        # Converting polynomial expression of constraint to function to be minimize
+        constr(vars => a)
+    end
+       
+    # Create NLopt model
+    model = Model(NLopt.Optimizer)
+
+    # Set algorithm 
+    set_optimizer_attribute(model, "algorithm", :LD_SLSQP) 
+    
+    # Set variables
+    @variable(model, y[1:length(vars)]);
+
+    # Register constraint
+    register(model, :e, length(y), e; autodiff = true)
+    
+    @NLconstraint(model, e(y...) == 0)
+
+    # Register objective
+    register(model, :g, length(y), g; autodiff = true)
+    @NLobjective(model, Min, g(y...))
+    
+    # Set guess
+    guess = best_sol
+    for (var, init_val) in zip(y, guess)
+        set_start_value(var, init_val)
+    end
+
+    # Call JuMP optimization function
+    JuMP.optimize!(model)
+
+    solution = vars => map(value, y)
+
+    return(solution, iter)
+end  
+
+function min2step(obj)
+    # obj - is objective function
+
+    # extract valiables from the objective
+    vars = variables(obj)
+    
+    # Perform global minimization with TSSOS package
+    iter = 0
+    best_sol = ones(length(vars))
+
+    try
+        opt,sol,data = tssos_first(obj, variables(obj), solution=true, QUIET = true);
+        # execute higher levels of the TSSOS hierarchy
+        iter = 1
+        best_sol = sol
+
+        while ~isnothing(opt)
+            iter += 1
+            best_sol = sol
+            try
+                opt,sol,data = tssos_higher!(data, solution=true, QUIET = true);
+            catch
+                break
+            end
+            
+            if iter > 5
+                best_sol = ones(length(vars))
+                break
+            end
+        end
+    catch
+        best_sol = ones(length(vars))
+    end  
+    
+   
+    function g(a...)
+        # Converting polynomial expression of objective to function to be minimized
+        obj(vars => a)
+    end
+       
+    # Create NLopt model
+    model = Model(NLopt.Optimizer)
+
+    # Set algorithm 
+    set_optimizer_attribute(model, "algorithm", :LD_SLSQP) 
+    
+    # Set variables
+    @variable(model, y[1:length(vars)]);
+
+    # Register objective
+    register(model, :g, length(y), g; autodiff = true)
+    @NLobjective(model, Min, g(y...))
+    
+    # Set guess
+    guess = best_sol
+    for (var, init_val) in zip(y, guess)
+        set_start_value(var, init_val)
+    end
+
+    # Call JuMP optimization function
+    JuMP.optimize!(model)
+
+    solution = vars => map(value, y)
+
+    return(solution, iter)
+end  
 
 end
