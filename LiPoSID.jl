@@ -2,13 +2,13 @@ module LiPoSID
 
 using LinearAlgebra
 using QuantumOptics
-using DynamicPolynomials
-# using MomentTools
+using DynamicPolynomials, MomentTools
 using MosekTools
 using Random
 using JuMP
 using NLopt
 using TSSOS
+using Clustering
 
 function hankel(y::AbstractArray)
     m, time_duration = size(y) # m - dimention of output vector y, time_duration - length of timeseries (number of time steps)
@@ -31,7 +31,12 @@ function lsid_ACx0(Y::AbstractArray, Δt, δ = 1e-6)
     U = U * s
     Vd = s * Vd
      
-    n = argmin(abs.(Σ/maximum(Σ) .- δ)) - 1 # estimated rank of the system
+    # n = argmin(abs.(Σ/maximum(Σ) .- δ)) - 1 # estimated rank of the system
+
+    Sigma_log = log.(Σ/maximum(Σ))
+    Sigma2D = reshape(Sigma_log, (1, length(Sigma_log)))
+
+    n = minimum(counts(kmeans(Sigma2D, 2))) + 1
     
     C = U[1:m, 1:n] # m -dimention of output, n - rank of the system
     
@@ -333,7 +338,7 @@ function minimize_global(obj, constr_list = [])
     
     minimize_local(obj, constr_list, best_candidate) 
    
-end
+end 
 
 # using QuantumOptics
 
@@ -368,7 +373,7 @@ function min2step(obj, constr)
     
     # Perform global minimization with TSSOS package
     try
-        opt,sol,data = tssos_first([obj, constr], variables(obj), maxdegree(constr)÷2 , numeq=1, solution=true, QUIET = true);
+        opt,sol,data = tssos_first([obj, constr], variables(obj), maxdegree(obj)÷2, numeq=1, solution=true, QUIET = true); 
     
         # execute higher levels of the TSSOS hierarchy
         iter = 1
