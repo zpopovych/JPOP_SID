@@ -2,7 +2,8 @@ module LiPoSID
 
 using LinearAlgebra
 using QuantumOptics
-using DynamicPolynomials, MomentTools
+using DynamicPolynomials
+# using MomentTools
 using MosekTools
 using Random
 using JuMP
@@ -332,85 +333,6 @@ function minimize_global(obj, constr_list = [])
     
     minimize_local(obj, constr_list, best_candidate) 
    
-end 
-
-function min2step(obj, constr)
-    # obj - is objective function
-    # constr - one constraint in the form of equation
-    
-    # Set Mosek as optimizer using JuMP
-    optimizer = optimizer_with_attributes(Mosek.Optimizer)
-    
-    # Perform global minimization to find candidate minimizers with MomentTools
-    obj_min, M = minimize(obj, [constr], [], variables(obj), maxdegree(obj) ÷ 2, optimizer)
-    
-    # Extract candidate minimizers from the MomentTools model     
-    candidate_minimizers = get_minimizers(M)
-      
-    # extract valiables from the objective
-    vars = variables(obj)
-
-    # assert that condidate minimizer has values for all variables
-    @assert length(vars) == size(candidate_minimizers,1)
-    
-    function g(a...)
-    # Converting polynomial expression of objective to function to be minimized
-    obj(vars => a)
-    end
-    
-    function e(a...)
-    # Converting polynomial expression of constraint to function to be minimize
-    constr(vars => a)
-    end
-       
-    # Create NLopt model
-    model = Model(NLopt.Optimizer)
-
-    # Set algorithm 
-    set_optimizer_attribute(model, "algorithm", :LN_COBYLA)
-
-    # Set variables
-    @variable(model, y[1:length(vars)]);
-
-    # Register constraint
-    register(model, :e, length(y), e; autodiff = true)
-    
-    @NLconstraint(model, e(y...) == 0)
-
-    # Register objective
-    register(model, :g, length(y), g; autodiff = true)
-    @NLobjective(model, Min, g(y...))
-    
-    # Declare to store solutions
-    num_of_candidates = size(candidate_minimizers,2)   
-    obj_values = Vector{Float64}(undef, num_of_candidates)
-    solutions = []
-    
-    for i in 1:num_of_candidates     
-        
-        # Set initial values of variables 
-        
-        guess = candidate_minimizers[:,i]
-        
-        for (var, init_val) in zip(y, guess)
-            set_start_value(var, init_val)
-        end
-        
-        # Call JuMP optimization function
-        JuMP.optimize!(model)
-
-        current_solution = vars => map(value, y)
-       
-        # Store current solution and reached objective
-        push!(solutions, current_solution)  
-        obj_values[i] = subs(obj, current_solution)
-        
-    end
-    
-    best_solution_num = argmin(obj_values)
-
-    return(solutions[best_solution_num])
-
 end
 
 # using QuantumOptics
@@ -446,13 +368,13 @@ function min2step(obj, constr)
     
     # Perform global minimization with TSSOS package
     try
-        opt,sol,data = tssos_first([obj, constr], variables(obj), 2, numeq=1, solution=true, QUIET = true); 
+        opt,sol,data = tssos_first([obj, constr], variables(obj), maxdegree(constr)÷2 , numeq=1, solution=true, QUIET = true);
     
         # execute higher levels of the TSSOS hierarchy
         iter = 1
         best_sol = sol
 
-        while ~isnothing(opt)
+        while ~isnothing(sol)
             iter += 1
             best_sol = sol
             try
@@ -528,7 +450,7 @@ function min2step(obj)
         iter = 1
         best_sol = sol
 
-        while ~isnothing(opt)
+        while ~isnothing(sol)
             iter += 1
             best_sol = sol
             try

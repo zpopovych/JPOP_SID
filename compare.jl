@@ -1,7 +1,10 @@
 include("LiPoSID.jl")
+using Random
+
+Random.seed!(140722)
 
 # n_samples = 100000
-n_samples = 2
+n_samples = 144
 seeds = rand(UInt, n_samples)
 @assert allunique(seeds)
 
@@ -53,11 +56,11 @@ basis = NLevelBasis(2)
 # MAIN LOOP
 
 #w_list = [0.0 0.01 0.02 0.03 0.04 0.05 0.08 0.1]
-w_list = [0.0 0.01]
+w_list = [0.0 0.01 0.05]
 
 using HDF5
 # File to save results to HDF5
-file_name = "LiPoSID_compare_methods_started_" * string(Dates.format(now(), "yyyy-u-dd_at_HH-MM")) * ".h5" 
+file_name = "LiPoSID_n4_compare_methods_started_" * string(Dates.format(now(), "yyyy-u-dd_at_HH-MM")) * ".h5"
 # Save all seeds in separate dataset
 h5open(file_name,"cw") do fid   # read-write, create file if not existing, preserve existing contents
     fid["seeds"] = seeds
@@ -112,8 +115,9 @@ end
         fidelity_kraus = LiPoSID.min_fidelity_between_series(basis, ρ_sid_kraus, ρ) 
 
         # (4) Linear SID as benckmark
-        δ = 1e-6
-        A, C, x0 = LiPoSID.lsid_ACx0(LiPoSID.bloch(ρ), Δt, δ)
+        #δ = 1e-2
+        #A, C, x0 = LiPoSID.lsid_ACx0(LiPoSID.bloch(ρ), Δt, δ)
+        A, C, x0 = LiPoSID.lsid_n_ACx0(LiPoSID.bloch(ρ), Δt, 4)
         bloch_sid = LiPoSID.propagate(A, C, x0, time_steps)
         ρ_lsid = LiPoSID.rho_series_from_bloch(bloch_sid)
         fidelity_lsid = LiPoSID.min_fidelity_between_series(basis, ρ_lsid, ρ)
