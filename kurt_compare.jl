@@ -24,13 +24,22 @@ function get_rho_series(file_name, γ)
         ρt = read(file[string(γ)])
         t = ρt["t"]
         ρ00 = ρt["p0"]; ρ01re = ρt["s_re"];  ρ01im = ρt["s_im"]
-        ρ = []
+        ρ_series = []
+        t_series = []
+
         for i in 1:length(t)
             ρ_i = [ ρ00[i]                    ρ01re[i] + im * ρ01im[i]
                     ρ01re[i] - im * ρ01im[i]  1 - ρ00[i]               ]
-            push!(ρ, ρ_i)
+            push!(ρ_series, convert(Matrix{ComplexF64}, ρ_i))
+            push!(t_series, convert(Float64, t[i]))
         end
-        return(ρ, t)
+        return(ρ_series, t_series)
+    end
+end
+
+function get_keys(df)
+    h5open(df, "r") do file
+        return keys(file)
     end
 end
 
@@ -44,27 +53,26 @@ using HDF5
 # File to save results to HDF5
 res_file_name = "Kurt_clust_compare_methods_started_" * string(Dates.format(now(), "yyyy-u-dd_at_HH-MM")) * ".h5"
 
-basis_file_names = ["State_B"*string(n)*"_data.h5" for n=1:4]
-dodeca_file_names = ["State_D"*string(n)*"_data.h5" for n=1:20]
-# data_file_names = [basis_file_names; dodeca_file_names] # vcat(basis_file_names, dodeca_file_names)
-
-data_file_names = ["State_B1_data.h5"]
+basis_file_names = ["State_B"*string(n) for n=1:4]
+dodeca_file_names = ["State_D"*string(n) for n=1:20]
+data_file_names = [basis_file_names; dodeca_file_names] # vcat(basis_file_names, dodeca_file_names)
 
 @time for df in data_file_names
     println("Processing file: ", df)
-    w_list = h5open(df, "r") do file
-    return keys(file)
-    end
+
+    full_data_file_name = "/home/zah/PycharmProjects/Kurt2021/2022JAN24/DATA/"*df*"_data.h5"
+    w_list = get_keys(full_data_file_name)
+    println("w_list = ", w_list)
 
     h5open(res_file_name,"cw") do fid   # read-write, create file if not existing, preserve existing contents
-            create_group(fid, sting(df))
-        end
+    create_group(fid, string(df))
+    end
 
     for w in w_list
 
         # Create noise level group
         h5open(res_file_name,"cw") do fid   # read-write, create file if not existing, preserve existing contents
-            create_group(fid[sting(df)], string(w))
+            create_group(fid[string(df)], string(w))
         end
 
         println("w=", w)
@@ -91,9 +99,11 @@ data_file_names = ["State_B1_data.h5"]
 
         # Read data series of Kurt data
 
-        full_data_file_name = "/home/zah/PycharmProjects/Kurt2021/2022JAN24/DATA/"*df
-
         ρ, t = get_rho_series(full_data_file_name, string(w))
+
+        ρ = convert(Vector{Matrix{ComplexF64}}, ρ)
+        t = convert(Vector{Float64}, t)
+
         Δt = t[2]-t[1]
         time_steps = length(t)
 
@@ -134,7 +144,7 @@ data_file_names = ["State_B1_data.h5"]
 
         # Save results to HDF5
 
-        h5open(file_name,"cw") do fid  # read-write, create file if not existing, preserve existing contents
+        h5open(res_file_name,"cw") do fid  # read-write, create file if not existing, preserve existing contents
 
             noise_level_group = open_group(fid[string(df)], string(w))
 
