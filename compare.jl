@@ -4,14 +4,14 @@ using Random
 Random.seed!(140722)
 
 # n_samples = 100000
-n_samples = 144
+n_samples = 1000
 seeds = rand(UInt, n_samples)
 @assert allunique(seeds)
 
-tₘₐₓ = 2.0 # maximum time 
-Δt = 0.01     # time step
-t = [0:Δt:tₘₐₓ;] # time span
-time_steps = length(t)
+const tₘₐₓ = 2.0 # maximum time
+const Δt = 0.01     # time step
+const t = [0:Δt:tₘₐₓ;] # time span
+const time_steps = length(t)
 
 using Dates
 using QuantumOptics
@@ -32,35 +32,18 @@ end
 
 using DynamicPolynomials
 
-@polyvar x[1:4]
-H_symb = [ 1.0 * x[1]              x[3] + im * x[4]
-           x[3] - im * x[4]        x[2]             ]
-
-@polyvar a[1:2, 1:2]
-@polyvar b[1:2, 1:2]
-J_symb = 1.0 * a + im * b
-
-@polyvar a1[1:2, 1:2]
-@polyvar b1[1:2, 1:2]
-K1_symb = 1.0 * a1 + im * b1
-
-@polyvar a2[1:2, 1:2]
-@polyvar b2[1:2, 1:2]
-K2_symb = 1.0 * a2 + im * b2
-
-K_symb_list = [K1_symb, K2_symb]
 
 using QuantumOptics
-basis = NLevelBasis(2)
+
 
 # MAIN LOOP
 
-#w_list = [0.0 0.01 0.02 0.03 0.04 0.05 0.08 0.1]
-w_list = [0.0 0.01 0.05]
+const w_list = [0.0 0.01 0.02 0.03 0.04 0.05 0.08 0.1]
+#const w_list = [0.0 0.01 0.05]
 
 using HDF5
 # File to save results to HDF5
-file_name = "LiPoSID_n4_compare_methods_started_" * string(Dates.format(now(), "yyyy-u-dd_at_HH-MM")) * ".h5"
+file_name = "LiPoSID_clust_compare_methods_started_" * string(Dates.format(now(), "yyyy-u-dd_at_HH-MM")) * ".h5"
 # Save all seeds in separate dataset
 h5open(file_name,"cw") do fid   # read-write, create file if not existing, preserve existing contents
     fid["seeds"] = seeds
@@ -81,9 +64,27 @@ end
        
 
     Threads.@threads for i=1:n_samples 
-    
-        
-        println("seed=", seeds[i])
+        @polyvar x[1:4]
+        H_symb = [ 1.0 * x[1]              x[3] + im * x[4]
+                   x[3] - im * x[4]        x[2]             ]
+
+        @polyvar a[1:2, 1:2]
+        @polyvar b[1:2, 1:2]
+        J_symb = 1.0 * a + im * b
+
+        @polyvar a1[1:2, 1:2]
+        @polyvar b1[1:2, 1:2]
+        K1_symb = 1.0 * a1 + im * b1
+
+        @polyvar a2[1:2, 1:2]
+        @polyvar b2[1:2, 1:2]
+        K2_symb = 1.0 * a2 + im * b2
+
+        K_symb_list = [K1_symb, K2_symb]
+
+        basis = NLevelBasis(2)
+
+        # println("seed=", seeds[i])
 
         # Random time series of density matrices using Lindblad master eqution
         ρ, H_exact, J_exact = LiPoSID.rand_Linblad_w_noise(basis, seeds[i], w, t)
@@ -112,12 +113,12 @@ end
         K1_sid = subs(K1_symb, solution_kraus)
         K2_sid = subs(K2_symb, solution_kraus)
         ρ_sid_kraus = LiPoSID.timeevolution_kraus(time_steps, ρ[1], [K1_sid, K2_sid])
-        fidelity_kraus = LiPoSID.min_fidelity_between_series(basis, ρ_sid_kraus, ρ) 
+        fidelity_kraus = LiPoSID.min_fidelity_between_series(basis, ρ_sid_kraus, ρ)
 
         # (4) Linear SID as benckmark
         #δ = 1e-2
-        #A, C, x0 = LiPoSID.lsid_ACx0(LiPoSID.bloch(ρ), Δt, δ)
-        A, C, x0 = LiPoSID.lsid_n_ACx0(LiPoSID.bloch(ρ), Δt, 4)
+        A, C, x0 = LiPoSID.lsid_ACx0(LiPoSID.bloch(ρ), Δt) #, δ)
+        # A, C, x0 = LiPoSID.lsid_n_ACx0(LiPoSID.bloch(ρ), Δt, 4)
         bloch_sid = LiPoSID.propagate(A, C, x0, time_steps)
         ρ_lsid = LiPoSID.rho_series_from_bloch(bloch_sid)
         fidelity_lsid = LiPoSID.min_fidelity_between_series(basis, ρ_lsid, ρ)

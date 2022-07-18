@@ -2,7 +2,8 @@ module LiPoSID
 
 using LinearAlgebra
 using QuantumOptics
-using DynamicPolynomials, MomentTools
+using DynamicPolynomials
+# using MomentTools
 using MosekTools
 using Random
 using JuMP
@@ -20,7 +21,7 @@ function hankel(y::AbstractArray)
     return H, m
 end
 
-function lsid_ACx0(Y::AbstractArray, Δt, δ = 1e-6) 
+function lsid_ACx0(Y::AbstractArray, Δt) #, δ = 1e-6)
     # y - output time series dim[y] = m x number_of_time_steps
     # δ - precission cutoff all the smaller values of Σ will be discarded 
     
