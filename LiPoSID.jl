@@ -10,6 +10,7 @@ using JuMP
 using NLopt
 using TSSOS
 using Clustering
+using HDF5
 
 function hankel(y::AbstractArray)
     m, time_duration = size(y) # m - dimention of output vector y, time_duration - length of timeseries (number of time steps)
@@ -267,14 +268,15 @@ function kraus_obj_constr(ρ, K...)
         obj += frobenius_norm2(sum(k * ρ[i] * k' for k in K) - ρ[i+1])
     end
     constr = frobenius_norm2(sum(k' * k for k in K) - I)
-    return real(obj), real(constr)
+    return real(obj), real(constr)*1e3
 end
 
 function timeevolution_kraus(t_steps, ρ₀, K)
     ρ = [ρ₀]
     for t = 2:t_steps
         #push!(ρ, Hermitian(sum([K[i]* ρ[end] * K[i]' for i = 1:length(K)])))
-        push!(ρ, sum([K[i]* ρ[end] * K[i]' for i = 1:length(K)]))
+        ρ_next = sum([K[i]* ρ[end] * K[i]' for i = 1:length(K)])
+        push!(ρ, ρ_next/tr(ρ_next))
 
     end
     return ρ
@@ -506,5 +508,85 @@ function min2step(obj)
 
     return(solution, iter)
 end  
+
+#### HDF5 READING RESULTS ####
+
+function get_seeds_and_timespan(file_name)   
+    h5open(file_name,"r") do fid   # read file, preserve existing contents
+        seeds = read(fid["seeds"])
+        Δt = read(fid["dt"])
+        tₘₐₓ = read(fid["t_max"])
+        return seeds,  Δt, tₘₐₓ
+    end
+end
+
+function get_noise_levels(file_name)   
+    h5open(file_name,"r") do fid   # read file, preserve existing contents
+        noise_levels = keys(fid["data_by_noise_level"])
+        return noise_levels
+    end
+end
+
+function get_variable_names(file_name, noise_level, seed)
+        h5open(file_name,"r") do fid   # read file, preserve existing contents
+        variable_names = keys(fid["data_by_noise_level"][string(noise_level)][string(seed)])
+        return variable_names
+    end
+end
+
+function get_by_name(file_name, var_name, noise_levels, seeds)
+        h5open(file_name,"r") do fid # read file, preserve existing contents
+        var_by_name = []
+        for w in noise_levels
+            current_noise_var = [ read(fid["data_by_noise_level"][string(w)][string(seed)][var_name]) for seed in seeds ]
+            push!(var_by_name, current_noise_var)
+        end
+        return(var_by_name)
+    end
+end
+
+function get_lsid(file_name, noise, seeds)
+    A = get_by_name(file_name, "A", [noise], seeds)[1]
+    C = get_by_name(file_name, "C", [noise], seeds)[1]
+    x0 = get_by_name(file_name, "x0", [noise], seeds)[1]
+    return A, C, x0
+end
+
+function get_kraus_sid(file_name, noise, seeds)  
+    K1_sid = get_by_name(file_name, "K1_sid", [noise], seeds)[1]
+    K2_sid = get_by_name(file_name, "K2_sid", [noise], seeds)[1]
+    return K1_sid, K2_sid
+end 
+
+function get_lindblad_params(file_name, noise, key,  seeds, basis)
+    H = [DenseOperator(basis, Hl) for Hl in get_by_name(file_name, "H_"*key, [noise], seeds)[1]]
+    J = [DenseOperator(basis, Jl) for Jl in get_by_name(file_name, "J_"*key, [noise], seeds)[1]]
+   return H, J
+end
+
+function lindblad_evolution(key, time_limit, Δt, noise_level, seed)
+    time_span = [0:Δt:time_limit;]
+    H_exact = DenseOperator(basis, get_by_name(file_name, "H_"*key, [noise_level], seed)[1][1])
+    J_exact = DenseOperator(basis, get_by_name(file_name, "J_"*key, [noise_level], seed)[1][1])
+    ρ0 = DenseOperator(basis, get_by_name(file_name, "rho0", [noise_level], seed)[1][1])
+    time, ρ_exact_ser  = timeevolution.master(time_span, ρ0, H_exact, [J_exact])
+    ρ = [ρₜ.data for ρₜ in ρ_exact_ser]
+end
+
+function lindblad_evolution_data(time_span, ρ0, H, J)
+    time, ρ_ser  = timeevolution.master(time_span, ρ0, H, [J])
+    ρ = [ρₜ.data for ρₜ in ρ_ser]
+end
+
+
+function read_fidelity_table(file_name, fid_name, noise, seeds)
+    fidelity_table = []
+    h5open(file_name,"r") do fid # read file, preserve existing contents
+        for seed in seeds
+            push!(fidelity_table, read(fid[string(noise)][string(seed)][string(fid_name)]))
+        end
+        return(mapreduce(permutedims, vcat, fidelity_table))
+    end
+end
 
 end
