@@ -53,8 +53,8 @@ dodeca_file_names = ["State_D"*string(n) for n=1:20]
 # data_file_names = [basis_file_names; dodeca_file_names] # vcat(basis_file_names, dodeca_file_names)
 train_files = basis_file_names
 
-#directory = "C:/Users/Zakhar/Documents/GitHub/JPOP_SID/DATA/"
-directory = "/home/zah/PycharmProjects/Kurt2021/2022JAN24/DATA/"
+directory = "C:/Users/Zakhar/Documents/GitHub/JPOP_SID/DATA/"
+#directory = "/home/zah/PycharmProjects/Kurt2021/2022JAN24/DATA/"
  
 
 # Read available coupling levels
@@ -150,29 +150,29 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
 
     # Polynomial optimization assuming Lindblad evolution
 
-    print(string(γᵢ)*"POP Pade: ")
+    print("|"*string(γᵢ)*"POP Pade: ")
     @suppress solution_pade, tssos_iter_pade = LiPoSID.min2step(obj_pade)
     #println(" Number of TSSOS iterations: ", tssos_iter_pade)
 
-    print(string(γᵢ)*"POP Simpson: ")
+    print("|"*string(γᵢ)*"POP Simpson: ")
     @suppress solution_simp, tssos_iter_simp = LiPoSID.min2step(obj_simp)
     #println(" Number of TSSOS iterations: ", tssos_iter_simp)
 
     H_sid_pade = subs(H_symb, solution_pade)
-    J_sid_pade =  [ subs(J_symb, solution_pade)  for J_symb in J_symb_list ]
+    J_sid_pade =  [ subs(J, solution_pade)  for J in J_symb ]
     
     H_sid_simp = subs(H_symb, solution_simp)
-    J_sid_simp = [ subs(J_symb, solution_simp) for J_symb in J_symb_list ] 
+    J_sid_simp = [ subs(J, solution_simp) for J in J_symb ] 
 
     # Polynomial optimization assuming Kraus evolution
-    print(string(γᵢ)*"POP Kraus: ")
+    print("|"*string(γᵢ)*"POP Kraus: ")
     @suppress solution_kraus, tssos_iter_kraus = LiPoSID.min2step(obj_kraus, constr_kraus)
     # println(" Number of TSSOS iterations: ", tssos_iter_kraus)
-    K_sid = [ subs(K_symb, solution_kraus)  for K_symb in K_symb_list ]
+    K_sid = [ subs(K, solution_kraus)  for K in K_symb ]
 
     println(string(γᵢ)*"POP done.|")
 
-    print("Saving for γ ="*string(γᵢ))
+    print("|Saving for γ ="*string(γᵢ))
 
     # Save results to HDF5
     
@@ -206,7 +206,7 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
         unlock(lck_write)
     end
 
-    println("Saving for γ ="*string(γᵢ)*"done.")
+    println("Saving for γ ="*string(γᵢ)*"done.|")
     
 end # of  γ coupling (noise) levels loop 
 

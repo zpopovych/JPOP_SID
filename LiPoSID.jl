@@ -190,11 +190,22 @@ function frobenius_norm2(m)
     return tr(m * m')
 end
 
-function lindblad_rhs(ρ, H, J)
+function lindblad_rhs(ρ, H, J::Matrix)
     """
     Right hand side of the Lindblad master equation
     """
     return -im * (H * ρ - ρ * H) + J * ρ * J' - (J' * J  * ρ + ρ * J' * J) / 2
+    
+end
+
+function lindblad_rhs(ρ, H, J::Array)
+    """
+    Right hand side of the Lindblad master equation
+    """
+   
+    Σ = sum([ ( Jⱼ * ρ * Jⱼ' - (Jⱼ' * Jⱼ  * ρ + ρ * Jⱼ' * Jⱼ)/2 ) for Jⱼ in J ])
+    
+    return -im * (H * ρ - ρ * H) + Σ 
     
 end
 
@@ -262,7 +273,7 @@ function kraus_obj(ρ::Vector{Matrix{ComplexF64}}, K1, K2)
     return obj
 end
 
-function kraus_obj_constr(ρ, K...) 
+function kraus_obj_constr(ρ, K) 
     obj = 0
     for i in 1:length(ρ)-1
         obj += frobenius_norm2(sum(k * ρ[i] * k' for k in K) - ρ[i+1])
@@ -277,7 +288,6 @@ function timeevolution_kraus(t_steps, ρ₀, K)
         #push!(ρ, Hermitian(sum([K[i]* ρ[end] * K[i]' for i = 1:length(K)])))
         ρ_next = sum([K[i]* ρ[end] * K[i]' for i = 1:length(K)])
         push!(ρ, ρ_next/tr(ρ_next))
-
     end
     return ρ
 end  
@@ -285,7 +295,7 @@ end
 function rand_Kraus_w_noise(seed, w, time_span)
     Random.seed!(seed)
     
-    ρ₀ = LiPoSID.rand_dm(2)       
+    ρ₀ = LiPoSID.rand_dm(2)     
 
     K1 = rand(2,2) + im*rand(2,2)
     K2 = rand(2,2) + im*rand(2,2)
@@ -293,6 +303,18 @@ function rand_Kraus_w_noise(seed, w, time_span)
     ρ_exact = timeevolution_kraus(time_span, ρ₀, [K1, K2])
     
     ρ = [ (1 - w) * ρₜ + w * LiPoSID.rand_dm(2) for ρₜ in ρ_exact ]
+end
+
+function rand_Kraus_w_noise(seed, w, time_span, kraus_rank)
+    Random.seed!(seed)
+    
+    ρ₀ = LiPoSID.rand_dm(2)
+    
+    K = [rand(2,2) + im*rand(2,2) for i in 1:kras_rank]
+    
+    ρ_exact = timeevolution_kraus(time_span, ρ₀, K)
+    
+    ρ = [ (1 - w) * ρₜ + w * LiPoSID.rand_dm(2) for ρₜ in ρ_exact ] # adding white noise
 end
 
 
@@ -347,6 +369,19 @@ end
 
 function quantum_series(basis, ρ)
     [ DenseOperator(basis, Hermitian(ρ[i])) for i = 1:length(ρ) ]
+end
+
+function fidelity_series(basis, ρ₁, ρ₂)
+
+    @assert  length(ρ₁) == length(ρ₂)
+
+    len_of_series = min(length(ρ₁), length(ρ₂))
+
+    ρ₁ = quantum_series(basis, ρ₁)
+    ρ₂ = quantum_series(basis, ρ₂)
+
+    return [abs(fidelity(ρ₁[i], ρ₂[i])) for i in 1:len_of_series]
+
 end
 
 function min_fidelity_between_series(basis, ρ1, ρ2)
