@@ -66,7 +66,9 @@ basis = NLevelBasis(2)
 
 # Names of files with Kurt data
 train_files = basis_file_names = ["State_B"*string(n) for n=1:4]
-test_files = dodeca_file_names = ["State_D"*string(n) for n=1:20]
+dodeca_file_names = ["State_D"*string(n) for n=1:20]
+
+test_files = [basis_file_names; dodeca_file_names]
 
 pop_sid_ops_file = "Kurt_POPSID_operators_2022-Sep-21_at_00-09.h5"
 res_fidelity_file_name = "Kurt_POPSID_fidelity_dodeca_"*date_and_time_string*".h5"
