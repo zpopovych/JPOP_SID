@@ -5,6 +5,7 @@ using DynamicPolynomials
 using QuantumOptics
 using LinearAlgebra
 using HDF5
+using Suppressor
 
 # Auxilary functions to read Kurt's data 
 
@@ -101,7 +102,7 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
 
 @time Threads.@threads for γᵢ in  γ   # loop over γ coupling (noise) levels   
     
-    println("gamma =", γᵢ) 
+    #println("gamma =", γᵢ) 
  
     obj_pade = 0
     obj_simp = 0
@@ -110,7 +111,7 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
 
     for df in train_files # loop over initial states
 
-        print("    Processing file: ", df)
+        #print(string(γᵢ)*", file: "*df*" |")
         
         # Read data series of Kurt data
 
@@ -118,7 +119,7 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
         try
             ρ, t = get_rho_series(full_data_file_name, string(γᵢ))
         finally
-            unlock(lck_write)
+            unlock(lck_read)
         end
 
         ρ = convert(Vector{Matrix{ComplexF64}}, ρ)
@@ -127,35 +128,35 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
         Δt = t[2]-t[1]
         time_steps = length(t)
 
-        print(" Assembling objective... ")
+        #print(" Assembling objective... ")
 
-        print(" Pade... ")
+        print("|"*string(γᵢ)*df*":obj Pade... ")
         # Polynomial objectives with (1) Pade and (2) Simpsom methods
         obj_pade += LiPoSID.pade_obj(ρ, t, H_symb, J_symb)
-        print(" Simpson... ")
+        print("|"*string(γᵢ)*df*":obj Simpson... ")
         obj_simp += LiPoSID.simpson_obj(ρ, t, H_symb, J_symb)
         
-        print(" Kraus... ")
+        print("|"*string(γᵢ)*df*":obj Kraus... ")
         # Polynomial objective and constrain assuming (3) Kraus evolution
         objk, constrk = LiPoSID.kraus_obj_constr(ρ, K_symb)
         obj_kraus += objk 
         constr_kraus += constrk #!!!!
 
-        println("done.")
+        println(string(γᵢ)*df*": obj done.|")
 
     end # of files (initial states) loop  
 
-    println("Performing system identification with polynomial optimization ...")
+    #println("Performing system identification with polynomial optimization ...")
 
     # Polynomial optimization assuming Lindblad evolution
 
-    print(" Pade: ")
-    solution_pade, tssos_iter_pade = LiPoSID.min2step(obj_pade)
-    println(" Number of TSSOS iterations: ", tssos_iter_pade)
+    print(string(γᵢ)*"POP Pade: ")
+    @suppress solution_pade, tssos_iter_pade = LiPoSID.min2step(obj_pade)
+    #println(" Number of TSSOS iterations: ", tssos_iter_pade)
 
-    print(" Simpson: ")
-    solution_simp, tssos_iter_simp = LiPoSID.min2step(obj_simp)
-    println(" Number of TSSOS iterations: ", tssos_iter_simp)
+    print(string(γᵢ)*"POP Simpson: ")
+    @suppress solution_simp, tssos_iter_simp = LiPoSID.min2step(obj_simp)
+    #println(" Number of TSSOS iterations: ", tssos_iter_simp)
 
     H_sid_pade = subs(H_symb, solution_pade)
     J_sid_pade =  [ subs(J_symb, solution_pade)  for J_symb in J_symb_list ]
@@ -164,14 +165,14 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
     J_sid_simp = [ subs(J_symb, solution_simp) for J_symb in J_symb_list ] 
 
     # Polynomial optimization assuming Kraus evolution
-    print(" Kraus: ")
-    solution_kraus, tssos_iter_kraus = LiPoSID.min2step(obj_kraus, constr_kraus)
-    println(" Number of TSSOS iterations: ", tssos_iter_kraus)
+    print(string(γᵢ)*"POP Kraus: ")
+    @suppress solution_kraus, tssos_iter_kraus = LiPoSID.min2step(obj_kraus, constr_kraus)
+    # println(" Number of TSSOS iterations: ", tssos_iter_kraus)
     K_sid = [ subs(K_symb, solution_kraus)  for K_symb in K_symb_list ]
 
-    println("optimization done.")
+    println(string(γᵢ)*"POP done.|")
 
-    print("Saving for gamma[i] ...")
+    print("Saving for γ ="*string(γᵢ))
 
     # Save results to HDF5
     
@@ -205,7 +206,7 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
         unlock(lck_write)
     end
 
-    println("done.")
+    println("Saving for γ ="*string(γᵢ)*"done.")
     
 end # of  γ coupling (noise) levels loop 
 
