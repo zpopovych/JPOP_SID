@@ -185,14 +185,14 @@ basis = NLevelBasis(2)
 
                 γ_group = create_group(fid, "gamma_"*string(γᵢ))
 
-                γ_group["H_sid_pade"] = convert.(ComplexF64, H_sid_pade)
-                γ_group["J_sid_pade"] = convert.(ComplexF64, J_sid_pade)
+                γ_group["H_sid_pade"] = [convert.(ComplexF64, H) for H in H_sid_pade]
+                γ_group["J_sid_pade"] = [convert.(ComplexF64, J) for J in J_sid_pade]
                 
 
-                γ_group["H_sid_simp"] = convert.(ComplexF64, H_sid_simp)
-                γ_group["J_sid_simp"] = convert.(ComplexF64, J_sid_simp)
+                γ_group["H_sid_simp"] = [convert.(ComplexF64, H) for H in H_sid_simp]
+                γ_group["J_sid_simp"] = [convert.(ComplexF64, J) for J in J_sid_simp]
             
-                γ_group["K_sid"] = convert.(ComplexF64, K_sid)
+                γ_group["K_sid"] = [convert.(ComplexF64, K) for K in K_sid]
                 
                 γ_group["tssos_iter_pade"] = tssos_iter_pade
                 γ_group["tssos_iter_simp"] = tssos_iter_simp
