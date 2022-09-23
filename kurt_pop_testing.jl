@@ -70,8 +70,9 @@ dodeca_file_names = ["State_D"*string(n) for n=1:20]
 
 test_files = [basis_file_names; dodeca_file_names]
 
-pop_sid_ops_file = "Kurt_POPSID_operators_2022-Sep-21_at_00-09.h5"
-res_fidelity_file_name = "Kurt_POPSID_fidelity_dodeca_"*date_and_time_string*".h5"
+#pop_sid_ops_file = "Kurt_POPSID_operators_2022-Sep-21_at_00-09.h5"
+pop_sid_ops_file = "Kurt_POPSID_operators-4_2022-Sep-22_at_22-42.H5"
+res_fidelity_file_name = "Kurt_POPSID_fidelity_test_all_"*date_and_time_string*".h5"
 
 directory = "C:/Users/Zakhar/Documents/GitHub/JPOP_SID/DATA/"
 

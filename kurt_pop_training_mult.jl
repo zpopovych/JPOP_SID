@@ -151,11 +151,11 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
     # Polynomial optimization assuming Lindblad evolution
 
     print("|"*string(γᵢ)*"POP Pade: ")
-    @suppress solution_pade, tssos_iter_pade = LiPoSID.min2step(obj_pade)
+    solution_pade, tssos_iter_pade = LiPoSID.min2step(obj_pade)
     #println(" Number of TSSOS iterations: ", tssos_iter_pade)
 
     print("|"*string(γᵢ)*"POP Simpson: ")
-    @suppress solution_simp, tssos_iter_simp = LiPoSID.min2step(obj_simp)
+    solution_simp, tssos_iter_simp = LiPoSID.min2step(obj_simp)
     #println(" Number of TSSOS iterations: ", tssos_iter_simp)
 
     H_sid_pade = subs(H_symb, solution_pade)
@@ -166,7 +166,7 @@ lck_write = ReentrantLock() # create lock to use when writing in the loop below
 
     # Polynomial optimization assuming Kraus evolution
     print("|"*string(γᵢ)*"POP Kraus: ")
-    @suppress solution_kraus, tssos_iter_kraus = LiPoSID.min2step(obj_kraus, constr_kraus)
+    solution_kraus, tssos_iter_kraus = LiPoSID.min2step(obj_kraus, constr_kraus)
     # println(" Number of TSSOS iterations: ", tssos_iter_kraus)
     K_sid = [ subs(K, solution_kraus)  for K in K_symb ]
 
