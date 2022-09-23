@@ -200,7 +200,7 @@ end
 
 function lindblad_rhs(ρ, H, J::Array)
     """
-    Right hand side of the Lindblad master equation
+    Right hand side of the Lindblad master equation with multiple dicipators
     """
    
     Σ = sum([ ( Jⱼ * ρ * Jⱼ' - (Jⱼ' * Jⱼ  * ρ + ρ * Jⱼ' * Jⱼ)/2 ) for Jⱼ in J ])
