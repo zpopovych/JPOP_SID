@@ -63,7 +63,9 @@ println("Available coupling levels gamma in ", γ)
 lck_read  = ReentrantLock() # create lock to use when reading in the loop below
 lck_write = ReentrantLock() # create lock to use when writing in the loop below
 
+# size of the operators is 2
 basis = NLevelBasis(2)
+
 
 @time for operators_num in 2:4 # number of Kraus operators 
 
@@ -185,14 +187,14 @@ basis = NLevelBasis(2)
 
                 γ_group = create_group(fid, "gamma_"*string(γᵢ))
 
-                γ_group["H_sid_pade"] = [convert.(ComplexF64, H) for H in H_sid_pade]
-                γ_group["J_sid_pade"] = [convert.(ComplexF64, J) for J in J_sid_pade]
+                γ_group["H_sid_pade"] = reshape(reduce(hcat,[convert.(ComplexF64, H) for H in H_sid_pade]), 2, 2, :)
+                γ_group["J_sid_pade"] = reshape(reduce(hcat,[convert.(ComplexF64, J) for J in J_sid_pade]), 2, 2, :)
                 
 
-                γ_group["H_sid_simp"] = [convert.(ComplexF64, H) for H in H_sid_simp]
-                γ_group["J_sid_simp"] = [convert.(ComplexF64, J) for J in J_sid_simp]
+                γ_group["H_sid_simp"] = reshape(reduce(hcat,[convert.(ComplexF64, H) for H in H_sid_simp]), 2, 2, :)
+                γ_group["J_sid_simp"] = reshape(reduce(hcat,[convert.(ComplexF64, J) for J in J_sid_simp]), 2, 2, :)
             
-                γ_group["K_sid"] = [convert.(ComplexF64, K) for K in K_sid]
+                γ_group["K_sid"] = reshape(reduce(hcat,[convert.(ComplexF64, K) for K in K_sid]), 2, 2, :)
                 
                 γ_group["tssos_iter_pade"] = tssos_iter_pade
                 γ_group["tssos_iter_simp"] = tssos_iter_simp
