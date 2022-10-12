@@ -129,13 +129,13 @@ basis = NLevelBasis(2)
         finally
             unlock(lck_write)
         end
+
+        obj_pade = 0
+        obj_simp = 0
+        obj_kraus = 0
+        constr_kraus = 0   
         
         for γᵢtₗᵢₘ in γt_cuts # loop over γt cuts [0.25, 0.5, 1, 2, 4, 8, 16]
-    
-            obj_pade = 0
-            obj_simp = 0
-            obj_kraus = 0
-            constr_kraus = 0          
 
             for df in train_files # loop over initial states
 
@@ -187,8 +187,17 @@ basis = NLevelBasis(2)
                     constr_kraus += constrk #!!!!
 
                     println(string(γᵢ)*df*": obj done.|")
+                   
+                end # of case if γt cut is posible 
 
-                end # of files (initial states) loop  
+            end # of files (initial states) loop 
+
+            if  obj_pade == obj_simp == obj_kraus == 0
+
+                print("| !!! Warning the cut γt  = "*string(γᵢtₗᵢₘ)*" is not availbe.")
+                println(" for γ = "*string(γᵢ)*" |")
+    
+            else 
 
                 #println("Performing system identification with polynomial optimization ...")
 
@@ -249,16 +258,10 @@ basis = NLevelBasis(2)
 
                 println("Saving for γt cut ="*string(γᵢtₗᵢₘ)*"done.|")
 
-            # end of processing the γt cut if possible (series is long enough)
- 
-            else # alternative case if γt cut is imposible due to the short series
-
-                println("| !!! Warning the cut γt  = "*string(γᵢtₗᵢₘ)*" is not availbe for γ ="*string(γᵢ)*"|")
-
-            end # of alternative case if γt cut is imposible due to the short series
-
+            end # of if case objectives not zero
+        
         end # of loop over γt cuts
-
+            
         println("Saving for γ ="*string(γᵢ)*"done.||")
         
     end # of γ coupling (noise) levels loop
