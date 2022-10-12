@@ -129,13 +129,13 @@ basis = NLevelBasis(2)
         #finally
         #    unlock(lck_write)
         #end
-
-        obj_pade = 0
-        obj_simp = 0
-        obj_kraus = 0
-        constr_kraus = 0   
         
         for γᵢtₗᵢₘ in γt_cuts # loop over γt cuts [0.25, 0.5, 1, 2, 4, 8, 16]
+
+            obj_pade = 0
+            obj_simp = 0
+            obj_kraus = 0
+            constr_kraus = 0   
 
             println("Processing for γt cut at ", γᵢtₗᵢₘ)
 
@@ -231,7 +231,7 @@ basis = NLevelBasis(2)
 
                 # Save results to HDF5
 
-                print("|Saving for for γt cut ="*string(γᵢtₗᵢₘ))
+                print("| Saving for for γt cut ="*string(γᵢtₗᵢₘ))
                 
                 #lock(lck_write)
                     
@@ -260,13 +260,13 @@ basis = NLevelBasis(2)
                 #    unlock(lck_write)
                 #end
 
-                println("Saving for γt cut ="*string(γᵢtₗᵢₘ)*"done.|")
+                println(" Saving for γt cut ="*string(γᵢtₗᵢₘ)*"done.|")
 
             end # of if case objectives not zero
         
         end # of loop over γt cuts
             
-        println("Saving for γ ="*string(γᵢ)*"done.||")
+        println("|| Saving for γ ="*string(γᵢ)*" is done.||")
         
     end # of γ coupling (noise) levels loop
 
