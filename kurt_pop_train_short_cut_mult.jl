@@ -38,7 +38,8 @@ end
 date_and_time_string =  string(Dates.format(now(), "yyyy-u-dd_at_HH-MM"))
 
 println("----------------------------------------------------------------------------------------")
-println("Polynomial System Identification for two level open bosonic system (Kurt simulated data)")
+println(" Polynomial System Identification for two level open bosonic system (Kurt simulated data)")
+println("   Training on 4-BASIS states for γt_cuts = [0.25, 0.5, 1, 2, 4, 8, 16] ")
 println("----------------------------------------------------------------------------------------")
 
 
@@ -48,9 +49,8 @@ dodeca_file_names = ["State_D"*string(n) for n=1:20]
 # data_file_names = [basis_file_names; dodeca_file_names] # vcat(basis_file_names, dodeca_file_names)
 train_files = basis_file_names
 
-directory = "C:/Users/Zakhar/Documents/GitHub/JPOP_SID/CUT_DATA/"
-#directory = "C:/Users/Zakhar/Documents/GitHub/JPOP_SID/DATA/"
-#directory = "/home/zah/PycharmProjects/Kurt2021/2022JAN24/DATA/"
+directory = "/home/zah/PycharmProjects/JPOP_SID/CUT_DATA/"
+# directory = "C:/Users/Zakhar/Documents/GitHub/JPOP_SID/CUT_DATA/"
 
 # Read available coupling levels
 df = train_files[1]
