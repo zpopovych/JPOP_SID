@@ -116,19 +116,19 @@ basis = NLevelBasis(2)
 
         # Create group in HDF5 file for particular γ
 
-        lock(lck_write)
+        #lock(lck_write)
                     
-        try
+        #try
 
-            h5open(directory*res_file_name,"cw") do fid  # read-write, create file if not existing, preserve existing contents
+        h5open(directory*res_file_name,"cw") do fid  # read-write, create file if not existing, preserve existing contents
 
-                γ_group = create_group(fid, "gamma_"*string(γᵢ))
-                
-            end # of HDF5 writing
+            γ_group = create_group(fid, "gamma_"*string(γᵢ))
+            
+        end # of HDF5 writing
 
-        finally
-            unlock(lck_write)
-        end
+        #finally
+        #    unlock(lck_write)
+        #end
 
         obj_pade = 0
         obj_simp = 0
@@ -136,6 +136,8 @@ basis = NLevelBasis(2)
         constr_kraus = 0   
         
         for γᵢtₗᵢₘ in γt_cuts # loop over γt cuts [0.25, 0.5, 1, 2, 4, 8, 16]
+
+            println("Processing for γt cut at ", γᵢtₗᵢₘ)
 
             for df in train_files # loop over initial states
 
@@ -165,7 +167,7 @@ basis = NLevelBasis(2)
                     ρ = ρ_long[1:step_lim] 
                     t = t_long[1:step_lim]
 
-                    print("| Processing γt_cut = "*string(γᵢtₗᵢₘ)) 
+                    print("|File "*df*"| γt_cut = "*string(γᵢtₗᵢₘ)*"done.") 
 
                     # Convert cut ρ series:
                     ρ = convert(Vector{Matrix{ComplexF64}}, ρ)
