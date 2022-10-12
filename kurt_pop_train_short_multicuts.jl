@@ -110,7 +110,7 @@ basis = NLevelBasis(2)
     println("Assembling polynomial objectives and constrains:")
 
 
-    Threads.@threads for γᵢ in  γ   # loop over γ coupling (noise) levels
+    for γᵢ in  γ   # loop over γ coupling (noise) levels
         
         println("Processing for γ =", γᵢ)
 
@@ -145,12 +145,14 @@ basis = NLevelBasis(2)
                 
                 # Read data series of Kurt data
 
-                lock(lck_read)
-                try
-                    ρ_long, t_long = get_rho_series(full_data_file_name, string(γᵢ))
-                finally
-                    unlock(lck_read)
-                end
+                #lock(lck_read)
+                #try
+                
+                ρ_long, t_long = get_rho_series(full_data_file_name, string(γᵢ))
+
+                #finally
+                #    unlock(lck_read)
+                #end
 
                 # Prepare for γt cut 
                 dt = t_long[2] - t_long[1]
@@ -229,9 +231,9 @@ basis = NLevelBasis(2)
 
                 print("|Saving for for γt cut ="*string(γᵢtₗᵢₘ))
                 
-                lock(lck_write)
+                #lock(lck_write)
                     
-                try
+                #try
 
                     h5open(directory*res_file_name,"cw") do fid  # read-write, create file if not existing, preserve existing contents
 
@@ -252,9 +254,9 @@ basis = NLevelBasis(2)
 
                     end # of HDF5 writing
 
-                finally
-                    unlock(lck_write)
-                end
+                #finally
+                #    unlock(lck_write)
+                #end
 
                 println("Saving for γt cut ="*string(γᵢtₗᵢₘ)*"done.|")
 
